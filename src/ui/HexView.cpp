@@ -32,18 +32,6 @@ void HexView::setData(QByteArray data, const qint64 baseOffset)
     emit byteSelectionChanged(-1, 0);
 }
 
-void HexView::clearSelection()
-{
-    if (selectionStart_ < 0) {
-        return;
-    }
-    selectionAnchor_ = -1;
-    selectionStart_ = -1;
-    selectionEnd_ = -1;
-    viewport()->update();
-    emit byteSelectionChanged(-1, 0);
-}
-
 QSize HexView::sizeHint() const
 {
     return QSize(offsetWidth_ + BytesPerRow * byteCellWidth_ + 24, 500);

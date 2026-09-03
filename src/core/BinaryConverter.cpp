@@ -28,30 +28,31 @@ QString bytesToBinary(const QByteArray& bytes)
 }
 } // namespace
 
-ConversionResult BinaryConverter::convert(
+QList<BinaryWord> BinaryConverter::convert(
     const QByteArray& bytes,
     const ByteOrder byteOrder,
     const WordSize wordSize)
 {
-    ConversionResult result;
+    QList<BinaryWord> result;
     if (bytes.isEmpty()) {
         return result;
     }
 
     const int wordBytes = static_cast<int>(wordSize) / 8;
-    result.words.reserve((bytes.size() + wordBytes - 1) / wordBytes);
+    if (wordBytes <= 0) {
+        return result;
+    }
+    result.reserve((bytes.size() + wordBytes - 1) / wordBytes);
 
     for (int offset = 0; offset < bytes.size(); offset += wordBytes) {
         BinaryWord word;
-        word.bytes = bytes.mid(offset, wordBytes);
-        word.complete = word.bytes.size() == wordBytes;
-
-        word.displayedBytes = word.bytes;
+        word.displayedBytes = bytes.mid(offset, wordBytes);
+        word.complete = word.displayedBytes.size() == wordBytes;
         if (word.complete && byteOrder == ByteOrder::LittleEndian) {
             std::reverse(word.displayedBytes.begin(), word.displayedBytes.end());
         }
         word.binary = bytesToBinary(word.displayedBytes);
-        result.words.append(std::move(word));
+        result.append(word);
     }
 
     return result;

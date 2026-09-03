@@ -11,7 +11,6 @@ public:
     explicit HexView(QWidget* parent = nullptr);
 
     void setData(QByteArray data, qint64 baseOffset);
-    void clearSelection();
 
     [[nodiscard]] QSize sizeHint() const override;
 

@@ -2,9 +2,8 @@
 
 bool BinaryFileReader::open(const QString& path)
 {
-    const QString requestedPath = path;
     close();
-    file_.setFileName(requestedPath);
+    file_.setFileName(path);
     if (!file_.open(QIODevice::ReadOnly)) {
         errorString_ = file_.errorString();
         return false;

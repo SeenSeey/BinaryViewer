@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
 find_package(Qt5 5.15 REQUIRED COMPONENTS Core Gui Widgets)
@@ -18,9 +17,18 @@ add_library(binary_viewer_core
     src/core/BinaryFileReader.cpp
     src/core/BinaryFileReader.h
     src/core/Types.h
+    src/core/ViewerSession.cpp
+    src/core/ViewerSession.h
 )
 target_include_directories(binary_viewer_core PUBLIC src)
 target_link_libraries(binary_viewer_core PUBLIC Qt5::Core)
+
+add_library(binary_viewer_presentation
+    src/presentation/BinaryTextFormatter.cpp
+    src/presentation/BinaryTextFormatter.h
+)
+target_include_directories(binary_viewer_presentation PUBLIC src)
+target_link_libraries(binary_viewer_presentation PUBLIC binary_viewer_core Qt5::Core)
 
 add_executable(BinaryViewer
     src/main.cpp
@@ -28,11 +36,17 @@ add_executable(BinaryViewer
     src/ui/HexView.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
+    src/ui/MainWindowUi.cpp
+    src/ui/MainWindowUi.h
+    src/ui/UiEffects.cpp
+    src/ui/UiEffects.h
+    resources/resources.qrc
 )
-target_link_libraries(BinaryViewer PRIVATE binary_viewer_core Qt5::Gui Qt5::Widgets)
+target_link_libraries(BinaryViewer PRIVATE binary_viewer_presentation Qt5::Gui Qt5::Widgets)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(binary_viewer_core PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(binary_viewer_presentation PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(BinaryViewer PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 

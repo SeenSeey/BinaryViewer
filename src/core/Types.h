@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QByteArray>
-#include <QList>
 #include <QString>
 
 enum class ByteOrder
@@ -20,13 +19,7 @@ enum class WordSize
 
 struct BinaryWord
 {
-    QByteArray bytes;
     QByteArray displayedBytes;
     QString binary;
     bool complete = false;
-};
-
-struct ConversionResult
-{
-    QList<BinaryWord> words;
 };

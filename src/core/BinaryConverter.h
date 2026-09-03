@@ -2,10 +2,12 @@
 
 #include "core/Types.h"
 
+#include <QList>
+
 class BinaryConverter
 {
 public:
-    [[nodiscard]] static ConversionResult convert(
+    [[nodiscard]] static QList<BinaryWord> convert(
         const QByteArray& bytes,
         ByteOrder byteOrder,
         WordSize wordSize);
