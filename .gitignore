@@ -48,8 +48,6 @@ coverage/
 *.profdata
 
 # Debugging and crash artifacts
-core
-core.*
 *.stackdump
 *.dSYM/
 

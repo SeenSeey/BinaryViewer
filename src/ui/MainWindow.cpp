@@ -11,6 +11,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontDatabase>
+#include <QFrame>
 #include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -23,6 +24,7 @@
 #include <QPropertyAnimation>
 #include <QResizeEvent>
 #include <QSignalBlocker>
+#include <QSizePolicy>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QStatusBar>
@@ -454,6 +456,58 @@ void MainWindow::createInterface()
     splitter->setSizes({720, 480});
     setCentralWidget(splitter);
 
+    auto* infoBar = statusBar();
+    infoBar->setObjectName(QStringLiteral("infoStatusBar"));
+    infoBar->setSizeGripEnabled(false);
+    infoBar->setContentsMargins(0, 0, 0, 0);
+
+    auto* statusPanel = new QWidget(infoBar);
+    statusPanel->setObjectName(QStringLiteral("statusPanel"));
+    auto* statusLayout = new QHBoxLayout(statusPanel);
+    statusLayout->setContentsMargins(16, 6, 16, 6);
+    statusLayout->setSpacing(0);
+
+    const auto addSeparator = [statusPanel, statusLayout] {
+        auto* separator = new QFrame(statusPanel);
+        separator->setObjectName(QStringLiteral("statusSeparator"));
+        separator->setFrameShape(QFrame::VLine);
+        statusLayout->addWidget(separator);
+    };
+    const auto addMetric = [statusPanel, statusLayout](
+                               const QString& caption, QLabel*& valueLabel) {
+        auto* metric = new QWidget(statusPanel);
+        metric->setObjectName(QStringLiteral("statusMetric"));
+        auto* metricLayout = new QHBoxLayout(metric);
+        metricLayout->setContentsMargins(0, 0, 0, 0);
+        metricLayout->setSpacing(7);
+
+        auto* captionLabel = new QLabel(caption, metric);
+        captionLabel->setObjectName(QStringLiteral("statusCaption"));
+        valueLabel = new QLabel(QStringLiteral("—"), metric);
+        valueLabel->setObjectName(QStringLiteral("statusValue"));
+        valueLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        metricLayout->addWidget(captionLabel);
+        metricLayout->addWidget(valueLabel);
+        statusLayout->addWidget(metric);
+        return metric;
+    };
+
+    auto* fileMetric = addMetric(tr("File"), statusFileValue_);
+    statusFileValue_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    fileMetric->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Preferred);
+    addSeparator();
+    addMetric(tr("Size"), statusSizeValue_);
+    addSeparator();
+    addMetric(tr("Offset"), statusOffsetValue_);
+    statusOffsetValue_->setProperty("monospace", true);
+    addSeparator();
+    addMetric(tr("Chunk"), statusChunkValue_);
+    addSeparator();
+    addMetric(tr("Selected"), statusSelectionValue_);
+    statusSelectionValue_->setProperty("monospace", true);
+    statusLayout->addStretch(1);
+    infoBar->addWidget(statusPanel, 1);
+
     connect(previousAction_, &QAction::triggered, this, &MainWindow::previousChunk);
     connect(nextAction_, &QAction::triggered, this, &MainWindow::nextChunk);
     connect(chunkSizeSpinBox_, qOverload<int>(&QSpinBox::valueChanged),
@@ -513,8 +567,20 @@ void MainWindow::applyTheme()
         QToolButton#stepButton:disabled { color: #b7b0a6; background: #f5f0e8; }
         QPlainTextEdit { background: #181715; color: #faf9f5; border: 0;
                          padding: 14px; selection-background-color: #cc785c; }
-        QStatusBar { background: #f5f0e8; color: #3d3d3a;
-                     border-top: 1px solid #e6dfd8; }
+        QStatusBar#infoStatusBar { background: #f5f0e8; color: #3d3d3a;
+                                   border-top: 1px solid #e6dfd8;
+                                   min-height: 46px; }
+        QStatusBar#infoStatusBar::item { border: 0; }
+        QWidget#statusPanel, QWidget#statusMetric { background: transparent; }
+        QLabel#statusCaption { color: #6c6a64; font-size: 12px;
+                               font-weight: 500; letter-spacing: 1px; }
+        QLabel#statusValue { color: #141413; font-size: 14px; font-weight: 500; }
+        QLabel#statusValue[monospace="true"] {
+            font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace;
+        }
+        QFrame#statusSeparator { color: #e6dfd8; background: #e6dfd8;
+                                 min-width: 1px; max-width: 1px;
+                                 margin: 3px 14px; }
         QScrollBar:vertical { background: #f5f0e8; width: 12px; margin: 0; }
         QScrollBar::handle:vertical { background: #c9c1b5; min-height: 24px;
                                       border-radius: 6px; }
@@ -612,26 +678,36 @@ void MainWindow::updateBinaryView()
 void MainWindow::updateStatusBar()
 {
     if (!reader_.isOpen()) {
-        statusBar()->showMessage(tr("No file opened"));
+        statusFileValue_->setText(tr("No file opened"));
+        statusFileValue_->setToolTip({});
+        statusSizeValue_->setText(QStringLiteral("—"));
+        statusOffsetValue_->setText(QStringLiteral("—"));
+        statusChunkValue_->setText(QStringLiteral("—"));
+        statusSelectionValue_->setText(QStringLiteral("—"));
         return;
     }
 
     const QString offsetText = QStringLiteral("%1")
         .arg(static_cast<qulonglong>(currentOffset()), 16, 16, QLatin1Char('0')).toUpper();
-    QString message = tr("File: %1 | Size: %2 | Offset: 0x%3")
-        .arg(QFileInfo(filePath_).fileName(), formattedFileSize(fileSize_), offsetText);
+    statusFileValue_->setText(QFileInfo(filePath_).fileName());
+    statusFileValue_->setToolTip(QFileInfo(filePath_).absoluteFilePath());
+    statusSizeValue_->setText(formattedFileSize(fileSize_));
+    statusOffsetValue_->setText(QStringLiteral("0x%1").arg(offsetText));
     if (fileSize_ > 0) {
         const qint64 totalChunks = fileSize_ / chunkSize_ + (fileSize_ % chunkSize_ != 0 ? 1 : 0);
-        message += tr(" | Chunk: %1 / %2").arg(chunkIndex_ + 1).arg(totalChunks);
+        statusChunkValue_->setText(tr("%1 / %2").arg(chunkIndex_ + 1).arg(totalChunks));
+    } else {
+        statusChunkValue_->setText(QStringLiteral("—"));
     }
     if (selectionStart_ >= 0 && selectionLength_ > 0) {
         const QString selectionOffset = QStringLiteral("%1")
             .arg(static_cast<qulonglong>(currentOffset() + selectionStart_),
                  16, 16, QLatin1Char('0')).toUpper();
-        message += tr(" | Selected: %1 bytes @ 0x%2")
-            .arg(selectionLength_).arg(selectionOffset);
+        statusSelectionValue_->setText(tr("%1 bytes @ 0x%2")
+                                           .arg(selectionLength_).arg(selectionOffset));
+    } else {
+        statusSelectionValue_->setText(QStringLiteral("—"));
     }
-    statusBar()->showMessage(message);
 }
 
 void MainWindow::showFileError(const QString& message)

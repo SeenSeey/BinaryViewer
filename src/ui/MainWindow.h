@@ -8,6 +8,7 @@
 
 class QAction;
 class QButtonGroup;
+class QLabel;
 class QPlainTextEdit;
 class QSpinBox;
 class HexView;
@@ -53,6 +54,11 @@ private:
 
     HexView* hexView_ = nullptr;
     QPlainTextEdit* binaryView_ = nullptr;
+    QLabel* statusFileValue_ = nullptr;
+    QLabel* statusSizeValue_ = nullptr;
+    QLabel* statusOffsetValue_ = nullptr;
+    QLabel* statusChunkValue_ = nullptr;
+    QLabel* statusSelectionValue_ = nullptr;
     QSpinBox* chunkSizeSpinBox_ = nullptr;
     QButtonGroup* byteOrderButtonGroup_ = nullptr;
     QButtonGroup* wordSizeButtonGroup_ = nullptr;
