@@ -11,6 +11,14 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt5 5.15 REQUIRED COMPONENTS Core Gui Widgets)
 
+function(binary_viewer_configure_compiler target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4 /utf-8)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endfunction()
+
 add_library(binary_viewer_core
     src/core/BinaryConverter.cpp
     src/core/BinaryConverter.h
@@ -22,6 +30,7 @@ add_library(binary_viewer_core
 )
 target_include_directories(binary_viewer_core PUBLIC src)
 target_link_libraries(binary_viewer_core PUBLIC Qt5::Core)
+binary_viewer_configure_compiler(binary_viewer_core)
 
 add_library(binary_viewer_presentation
     src/presentation/BinaryTextFormatter.cpp
@@ -29,6 +38,7 @@ add_library(binary_viewer_presentation
 )
 target_include_directories(binary_viewer_presentation PUBLIC src)
 target_link_libraries(binary_viewer_presentation PUBLIC binary_viewer_core Qt5::Core)
+binary_viewer_configure_compiler(binary_viewer_presentation)
 
 add_executable(BinaryViewer
     src/main.cpp
@@ -43,12 +53,19 @@ add_executable(BinaryViewer
     resources/resources.qrc
 )
 target_link_libraries(BinaryViewer PRIVATE binary_viewer_presentation Qt5::Gui Qt5::Widgets)
+binary_viewer_configure_compiler(BinaryViewer)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(binary_viewer_core PRIVATE -Wall -Wextra -Wpedantic)
-    target_compile_options(binary_viewer_presentation PRIVATE -Wall -Wextra -Wpedantic)
-    target_compile_options(BinaryViewer PRIVATE -Wall -Wextra -Wpedantic)
+if(WIN32)
+    set_target_properties(BinaryViewer PROPERTIES WIN32_EXECUTABLE TRUE)
+    set(binary_viewer_runtime_destination ".")
+else()
+    include(GNUInstallDirs)
+    set(binary_viewer_runtime_destination "${CMAKE_INSTALL_BINDIR}")
 endif()
+
+install(TARGETS BinaryViewer
+    RUNTIME DESTINATION "${binary_viewer_runtime_destination}"
+)
 
 include(CTest)
 if(BUILD_TESTING)
