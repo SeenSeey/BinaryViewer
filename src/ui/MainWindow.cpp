@@ -37,6 +37,18 @@ namespace
 {
 constexpr int MaximumChunkSizeBytes = 4 * 1024 * 1024;
 
+QString hexByteLabels(const QByteArray& bytes)
+{
+    QStringList labels;
+    labels.reserve(bytes.size());
+    for (const char byte : bytes) {
+        const QString hex = QStringLiteral("%1")
+            .arg(static_cast<unsigned char>(byte), 2, 16, QLatin1Char('0')).toUpper();
+        labels.append(QStringLiteral("   %1   ").arg(hex));
+    }
+    return labels.join(QLatin1Char(' '));
+}
+
 class PressFeedback final : public QObject
 {
 public:
@@ -584,14 +596,15 @@ void MainWindow::updateBinaryView()
     const ConversionResult converted = BinaryConverter::convert(selected, byteOrder(), wordSize());
     int completeIndex = 0;
     for (const BinaryWord& word : converted.words) {
+        QString prefix;
         if (word.complete) {
-            lines << QStringLiteral("[%1] %2").arg(completeIndex++).arg(word.binary);
+            prefix = QStringLiteral("[%1] ").arg(completeIndex++);
         } else {
-            lines << tr("Partial word (%1/%2 bit): %3")
-                         .arg(word.bytes.size() * 8)
-                         .arg(wordBits)
-                         .arg(word.binary);
+            prefix = tr("Partial word (%1/%2 bit): ")
+                         .arg(word.bytes.size() * 8).arg(wordBits);
         }
+        lines << QString(prefix.size(), QLatin1Char(' ')) + hexByteLabels(word.displayedBytes)
+              << prefix + word.binary;
     }
     binaryView_->setPlainText(lines.join(QLatin1Char('\n')));
 }

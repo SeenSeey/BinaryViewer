@@ -2,6 +2,8 @@
 
 #include <QtTest>
 
+#include <algorithm>
+
 class BinaryConverterTests final : public QObject
 {
     Q_OBJECT
@@ -55,6 +57,11 @@ void BinaryConverterTests::completeWords()
     QCOMPARE(result.words.size(), 1);
     QVERIFY(result.words.first().complete);
     QCOMPARE(result.words.first().binary, expected);
+    QByteArray expectedDisplayedBytes = input;
+    if (static_cast<ByteOrder>(byteOrder) == ByteOrder::LittleEndian) {
+        std::reverse(expectedDisplayedBytes.begin(), expectedDisplayedBytes.end());
+    }
+    QCOMPARE(result.words.first().displayedBytes, expectedDisplayedBytes);
 }
 
 void BinaryConverterTests::partialWordIsNotReversed()
@@ -65,6 +72,7 @@ void BinaryConverterTests::partialWordIsNotReversed()
     QCOMPARE(result.words.at(0).binary, QStringLiteral("00110100 00010010"));
     QVERIFY(result.words.at(0).complete);
     QCOMPARE(result.words.at(1).binary, QStringLiteral("01010110"));
+    QCOMPARE(result.words.at(1).displayedBytes, QByteArray::fromHex("56"));
     QVERIFY(!result.words.at(1).complete);
 }
 
