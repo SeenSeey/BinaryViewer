@@ -57,6 +57,55 @@ binary_viewer_configure_compiler(BinaryViewer)
 
 if(WIN32)
     set_target_properties(BinaryViewer PROPERTIES WIN32_EXECUTABLE TRUE)
+
+    find_program(binary_viewer_powershell
+        NAMES powershell.exe powershell
+    )
+    if(NOT binary_viewer_powershell)
+        message(FATAL_ERROR "PowerShell is required to generate the Windows application icon")
+    endif()
+
+    set(binary_viewer_generated_directory "${CMAKE_CURRENT_BINARY_DIR}/generated/windows")
+    set(binary_viewer_windows_icon "${binary_viewer_generated_directory}/BinaryViewer.ico")
+    set(binary_viewer_windows_resource "${binary_viewer_generated_directory}/BinaryViewer.rc")
+
+    add_custom_command(
+        OUTPUT "${binary_viewer_windows_icon}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${binary_viewer_generated_directory}"
+        COMMAND "${binary_viewer_powershell}"
+            -NoProfile
+            -NonInteractive
+            -ExecutionPolicy Bypass
+            -File "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/GenerateIcon.ps1"
+            -OutputPath "${binary_viewer_windows_icon}"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/GenerateIcon.ps1"
+        COMMENT "Generating the Windows icon from the Binary Viewer brand symbol"
+        VERBATIM
+    )
+
+    set(BINARY_VIEWER_WINDOWS_ICON "${binary_viewer_windows_icon}")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/BinaryViewer.rc.in"
+        "${binary_viewer_windows_resource}"
+        @ONLY
+    )
+    set_source_files_properties(
+        "${binary_viewer_windows_icon}"
+        PROPERTIES GENERATED TRUE HEADER_FILE_ONLY TRUE
+    )
+    add_custom_target(binary_viewer_windows_icon
+        DEPENDS "${binary_viewer_windows_icon}"
+    )
+    add_dependencies(BinaryViewer binary_viewer_windows_icon)
+    set_property(
+        SOURCE "${binary_viewer_windows_resource}"
+        APPEND PROPERTY OBJECT_DEPENDS "${binary_viewer_windows_icon}"
+    )
+    target_sources(BinaryViewer PRIVATE
+        "${binary_viewer_windows_resource}"
+        "${binary_viewer_windows_icon}"
+    )
+
     set(binary_viewer_runtime_destination ".")
 else()
     include(GNUInstallDirs)
@@ -66,6 +115,23 @@ endif()
 install(TARGETS BinaryViewer
     RUNTIME DESTINATION "${binary_viewer_runtime_destination}"
 )
+
+if(WIN32)
+    add_custom_target(package_windows
+        COMMAND "${CMAKE_COMMAND}"
+            "-DBINARY_VIEWER_EXECUTABLE=$<TARGET_FILE:BinaryViewer>"
+            "-DWINDEPLOYQT_EXECUTABLE=$<TARGET_FILE_DIR:Qt5::qmake>/windeployqt.exe"
+            "-DBUILD_CONFIG=$<CONFIG>"
+            "-DTARGET_POINTER_SIZE=${CMAKE_SIZEOF_VOID_P}"
+            "-DPROJECT_VERSION=${PROJECT_VERSION}"
+            "-DPACKAGE_OUTPUT_DIRECTORY=${CMAKE_BINARY_DIR}/package/windows"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/PackageWindows.cmake"
+        DEPENDS BinaryViewer
+        COMMENT "Creating the Binary Viewer portable Windows package"
+        USES_TERMINAL
+        VERBATIM
+    )
+endif()
 
 include(CTest)
 if(BUILD_TESTING)
